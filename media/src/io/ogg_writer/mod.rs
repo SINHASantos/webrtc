@@ -127,7 +127,7 @@ impl<W: Write + Seek> OggWriter<W> {
     ) -> Result<()> {
         self.last_payload_size = payload.len();
         self.last_payload = payload.clone();
-        let n_segments = (self.last_payload_size + 255 - 1) / 255;
+        let n_segments = self.last_payload_size.div_ceil(255);
 
         let mut page =
             Vec::with_capacity(PAGE_HEADER_SIZE + 1 + self.last_payload_size + n_segments);
@@ -169,6 +169,10 @@ impl<W: Write + Seek> OggWriter<W> {
 impl<W: Write + Seek> Writer for OggWriter<W> {
     /// write_rtp adds a new packet and writes the appropriate headers for it
     fn write_rtp(&mut self, packet: &rtp::packet::Packet) -> Result<()> {
+        if packet.payload.is_empty() {
+            return Ok(());
+        }
+
         let mut opus_packet = rtp::codecs::opus::OpusPacket;
         let payload = opus_packet.depacketize(&packet.payload)?;
 
